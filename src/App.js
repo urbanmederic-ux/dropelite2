@@ -74,40 +74,54 @@ const ALI_NICHE_SEARCHES = [
 
 // ── FALLBACK WINNERS (si API AliExpress inaccessible) ────────────────────────
 // Produits sélectionnés à la main — tous vrais winners AliExpress vérifiés
-// ── VRAIES IMAGES ALIEXPRESS (IDs produits vérifiés, CDN public sans CORS) ──────
-// Format image: https://ae01.alicdn.com/kf/{IMAGE_HASH}_350x350.jpg
+// ── SAFEFETCH : wrapper fetch immunisé contre les extensions Chrome ──────────────
+// Certaines extensions (adspy, ad blockers) interceptent fetch() et lèvent des
+// erreurs synchrones qui ne peuvent pas être attrapées par un try/catch normal.
+// Ce wrapper les neutralise en encapsulant dans un new Promise().
+function safeFetch(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    try {
+      fetch(url, options).then(resolve).catch(reject);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+// ── PRODUITS FALLBACK — images via Unsplash Source API (keyword-matched, fiable) ─
+// Quand l'API AliExpress répond → product_main_image_url remplace ces images auto
+// [nom, niche, emoji, prixAli, ventes, note, aliItemId, unsplashKeyword]
 const ALI_REAL_WINNERS = [
-  // [nom, niche, emoji, prixAli, ventes, note, aliItemId, imageHash]
-  ["LED Galaxy Star Projector",         "Home & Décor",      "🏠", 8.99,  12500, 96.4, "1005003686043281", "HTB1nb1FXIfrK1RjSZFNq6xIpXXaL"],
-  ["Bone Conduction Earbuds",           "Tech & Gadgets",    "⚡", 18.50, 8200,  95.8, "1005004335704810", "HTB1YxlJXIfrK1RjSspbq6A4pFXaO"],
-  ["Ultrasonic Facial Cleansing Brush", "Beauty & Care",     "✨", 12.20, 15400, 97.2, "1005003916803679", "HTB1V5JuXIfrK1RjSspbq6A4pFXaz"],
-  ["Mini Massage Gun Portable",         "Sport & Wellness",  "💪", 22.00, 9800,  96.0, "1005004051695322", "HTB1XmyqXIfrK1RjSspbq6A4pFXaS"],
-  ["Anti-Theft USB Backpack",           "Fashion",           "👗", 16.80, 7300,  95.5, "32961337574",      "HTB1fZXkXIbrK1RjSZPfq6y6vFXaL"],
-  ["Smart Cat Water Fountain",          "Pets",              "🐾", 14.50, 11200, 96.8, "1005002587920750", "HTB1nb2aXIfrK1RjSZFNq6xIpXXaS"],
-  ["Magnetic Car Phone Mount",          "Auto & Moto",       "🚗", 5.20,  19800, 95.2, "32956007798",      "HTB1nb3aXIfrK1RjSZFNq6xIpXXaT"],
-  ["Solar Pathway Garden Lights",       "Garden",            "🌿", 9.80,  6700,  96.1, "1005003695555827", "HTB1nb4aXIfrK1RjSZFNq6xIpXXaU"],
-  ["WiFi Baby Monitor HD",              "Kids & Baby",       "👶", 28.50, 5400,  97.0, "1005004142789231", "HTB1nb5aXIfrK1RjSZFNq6xIpXXaV"],
-  ["Mini Air Fryer 2L Compact",         "Kitchen",           "🍳", 31.00, 4800,  95.9, "1005003931648459", "HTB1nb6aXIfrK1RjSZFNq6xIpXXaW"],
-  ["Knee Compression Brace",            "Health",            "🏥", 7.50,  22100, 96.5, "33021202267",      "HTB1nb7aXIfrK1RjSZFNq6xIpXXaX"],
-  ["Aluminum Laptop Stand",             "Office",            "💼", 13.20, 14300, 96.2, "1005003614768337", "HTB1nb8aXIfrK1RjSZFNq6xIpXXaY"],
-  ["3D Moon Lamp XL Touch",             "Home & Décor",      "🏠", 11.50, 9600,  95.7, "32965109771",      "HTB1nb9aXIfrK1RjSZFNq6xIpXXaZ"],
-  ["True Wireless Earbuds ANC",         "Tech & Gadgets",    "⚡", 24.90, 7100,  96.3, "1005004094618474", "HTB1nbaXIfrK1RjSZFNq6xIpXXa0"],
-  ["IPL Hair Removal Device",           "Beauty & Care",     "✨", 35.00, 6200,  95.4, "1005003897694042", "HTB1nbbXIfrK1RjSZFNq6xIpXXa1"],
-  ["EMS Neck Shoulder Massager",        "Sport & Wellness",  "💪", 16.50, 8900,  96.7, "1005004158639294", "HTB1nbcXIfrK1RjSZFNq6xIpXXa2"],
-  ["Minimalist RFID Wallet",            "Fashion",           "👗", 6.80,  16400, 95.1, "32960185544",      "HTB1nbdXIfrK1RjSZFNq6xIpXXa3"],
-  ["Interactive Cat Laser Toy",         "Pets",              "🐾", 8.20,  13600, 96.4, "1005002954977898", "HTB1nbeXIfrK1RjSZFNq6xIpXXa4"],
-  ["Dash Cam 4K Front Rear",            "Auto & Moto",       "🚗", 42.00, 3900,  95.8, "1005004277803748", "HTB1nbfXIfrK1RjSZFNq6xIpXXa5"],
-  ["Indoor Herb Garden Kit",            "Garden",            "🌿", 18.90, 5100,  96.0, "1005003838124768", "HTB1nbgXIfrK1RjSZFNq6xIpXXa6"],
-  ["Montessori Activity Board",         "Kids & Baby",       "👶", 22.50, 4500,  97.1, "1005004036217684", "HTB1nbhXIfrK1RjSZFNq6xIpXXa7"],
-  ["Electric Milk Frother",             "Kitchen",           "🍳", 7.90,  27800, 95.6, "32841273380",      "HTB1nbiXIfrK1RjSZFNq6xIpXXa8"],
-  ["Red Light Therapy Panel",           "Health",            "🏥", 45.00, 3200,  96.2, "1005004372648291", "HTB1nbjXIfrK1RjSZFNq6xIpXXa9"],
-  ["Monitor LED Light Bar",             "Office",            "💼", 19.50, 7600,  95.9, "1005003689042847", "HTB1nbkXIfrK1RjSZFNq6xIpXXaa"],
-  ["Smart Aroma Diffuser RGB",          "Home & Décor",      "🏠", 14.80, 8400,  96.1, "1005003747284916", "HTB1nblXIfrK1RjSZFNq6xIpXXab"],
-  ["Power Bank 10000mAh Fast",          "Tech & Gadgets",    "⚡", 21.50, 6800,  95.3, "1005004291837465", "HTB1nbmXIfrK1RjSZFNq6xIpXXac"],
-  ["Microcurrent Face Lift Device",     "Beauty & Care",     "✨", 28.00, 5700,  96.6, "1005003914627839", "HTB1nbnXIfrK1RjSZFNq6xIpXXad"],
-  ["Resistance Bands Set 5pcs",         "Sport & Wellness",  "💪", 9.50,  18900, 95.8, "33037274609",      "HTB1nboXIfrK1RjSZFNq6xIpXXae"],
-  ["Waterproof Crossbody Bag",          "Fashion",           "👗", 11.20, 12100, 95.4, "32967841052",      "HTB1nbpXIfrK1RjSZFNq6xIpXXaf"],
-  ["GPS Pet Tracker Mini",              "Pets",              "🐾", 24.90, 4100,  96.9, "1005004181693742", "HTB1nbqXIfrK1RjSZFNq6xIpXXag"],
+  ["LED Galaxy Star Projector",         "Home & Décor",      "🏠", 8.99,  12500, 96.4, "1005003686043281", "galaxy+star+projector"],
+  ["Bone Conduction Earbuds",           "Tech & Gadgets",    "⚡", 18.50, 8200,  95.8, "1005004335704810", "wireless+earbuds+sport"],
+  ["Ultrasonic Facial Cleansing Brush", "Beauty & Care",     "✨", 12.20, 15400, 97.2, "1005003916803679", "facial+cleansing+brush+beauty"],
+  ["Mini Massage Gun Portable",         "Sport & Wellness",  "💪", 22.00, 9800,  96.0, "1005004051695322", "massage+gun+sport"],
+  ["Anti-Theft USB Backpack",           "Fashion",           "👗", 16.80, 7300,  95.5, "32961337574",      "backpack+travel+urban"],
+  ["Smart Cat Water Fountain",          "Pets",              "🐾", 14.50, 11200, 96.8, "1005002587920750", "cat+water+fountain+pet"],
+  ["Magnetic Car Phone Mount",          "Auto & Moto",       "🚗", 5.20,  19800, 95.2, "32956007798",      "car+phone+mount+magnetic"],
+  ["Solar Pathway Garden Lights",       "Garden",            "🌿", 9.80,  6700,  96.1, "1005003695555827", "solar+garden+lights+outdoor"],
+  ["WiFi Baby Monitor HD",              "Kids & Baby",       "👶", 28.50, 5400,  97.0, "1005004142789231", "baby+monitor+camera"],
+  ["Mini Air Fryer 2L Compact",         "Kitchen",           "🍳", 31.00, 4800,  95.9, "1005003931648459", "air+fryer+kitchen"],
+  ["Knee Compression Brace",            "Health",            "🏥", 7.50,  22100, 96.5, "33021202267",      "knee+brace+compression+sport"],
+  ["Aluminum Laptop Stand",             "Office",            "💼", 13.20, 14300, 96.2, "1005003614768337", "laptop+stand+aluminum+desk"],
+  ["3D Moon Lamp XL Touch",             "Home & Décor",      "🏠", 11.50, 9600,  95.7, "32965109771",      "moon+lamp+night+light"],
+  ["True Wireless Earbuds ANC",         "Tech & Gadgets",    "⚡", 24.90, 7100,  96.3, "1005004094618474", "wireless+earbuds+bluetooth"],
+  ["IPL Hair Removal Device",           "Beauty & Care",     "✨", 35.00, 6200,  95.4, "1005003897694042", "ipl+hair+removal+beauty"],
+  ["EMS Neck Shoulder Massager",        "Sport & Wellness",  "💪", 16.50, 8900,  96.7, "1005004158639294", "neck+shoulder+massager"],
+  ["Minimalist RFID Wallet",            "Fashion",           "👗", 6.80,  16400, 95.1, "32960185544",      "minimalist+wallet+rfid"],
+  ["Interactive Cat Laser Toy",         "Pets",              "🐾", 8.20,  13600, 96.4, "1005002954977898", "cat+laser+toy+pet"],
+  ["Dash Cam 4K Front Rear",            "Auto & Moto",       "🚗", 42.00, 3900,  95.8, "1005004277803748", "dash+cam+car+camera"],
+  ["Indoor Herb Garden Kit",            "Garden",            "🌿", 18.90, 5100,  96.0, "1005003838124768", "herb+garden+indoor+plant"],
+  ["Montessori Activity Board",         "Kids & Baby",       "👶", 22.50, 4500,  97.1, "1005004036217684", "montessori+toy+baby+kids"],
+  ["Electric Milk Frother",             "Kitchen",           "🍳", 7.90,  27800, 95.6, "32841273380",      "milk+frother+coffee+kitchen"],
+  ["Red Light Therapy Panel",           "Health",            "🏥", 45.00, 3200,  96.2, "1005004372648291", "red+light+therapy+wellness"],
+  ["Monitor LED Light Bar",             "Office",            "💼", 19.50, 7600,  95.9, "1005003689042847", "led+light+bar+monitor+desk"],
+  ["Smart Aroma Diffuser RGB",          "Home & Décor",      "🏠", 14.80, 8400,  96.1, "1005003747284916", "aroma+diffuser+essential+oil"],
+  ["Power Bank 10000mAh Fast",          "Tech & Gadgets",    "⚡", 21.50, 6800,  95.3, "1005004291837465", "power+bank+portable+charger"],
+  ["Microcurrent Face Lift Device",     "Beauty & Care",     "✨", 28.00, 5700,  96.6, "1005003914627839", "face+lift+beauty+device"],
+  ["Resistance Bands Set 5pcs",         "Sport & Wellness",  "💪", 9.50,  18900, 95.8, "33037274609",      "resistance+bands+fitness+gym"],
+  ["Waterproof Crossbody Bag",          "Fashion",           "👗", 11.20, 12100, 95.4, "32967841052",      "crossbody+bag+waterproof+women"],
+  ["GPS Pet Tracker Mini",              "Pets",              "🐾", 24.90, 4100,  96.9, "1005004181693742", "gps+tracker+pet+dog"],
 ];
 
 // ── SIGNATURE HMAC-SHA256 ─────────────────────────────────────────────────────
@@ -144,21 +158,28 @@ async function aliFetchProducts(keyword, pageSize = 30) {
     const apiUrl = `https://gw.api.aliexpress.com/sync?${q}`;
     // Utiliser plusieurs proxies CORS en cascade pour éviter les blocages
     const proxies = [
-      ALI_PROXY_URL + encodeURIComponent(apiUrl),
-      "https://corsproxy.io/?" + encodeURIComponent(apiUrl),
+      "https://api.allorigins.win/raw?url=" + encodeURIComponent(apiUrl),
+      "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(apiUrl),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(apiUrl),
+      "https://proxy.cors.sh/" + apiUrl,
+      "https://corsproxy.io/?" + encodeURIComponent(apiUrl),
     ];
     for (const proxyUrl of proxies) {
       try {
-        const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
-        if (!res.ok) continue;
+        const res = await safeFetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
+        if (!res.ok) { console.warn("[AliExpress] proxy non-ok:", res.status, proxyUrl.slice(0,50)); continue; }
         const data = await res.json();
         const result = data?.aliexpress_affiliate_product_query_response?.resp_result;
         if (result && result.resp_code === 200) {
-          return result?.result?.products?.product || [];
+          const products = result?.result?.products?.product || [];
+          console.log(`[AliExpress] ✅ ${products.length} produits pour "${keyword}"`);
+          return products;
+        } else {
+          console.warn(`[AliExpress] API erreur pour "${keyword}":`, result?.resp_msg, "code:", result?.resp_code);
         }
-      } catch { continue; }
+      } catch(e) { console.warn("[AliExpress] proxy échoué:", e.message); continue; }
     }
+    console.warn(`[AliExpress] ❌ Tous les proxies ont échoué pour "${keyword}"`);
     return [];
   } catch { return []; }
 }
@@ -197,7 +218,7 @@ async function aliFetchTrendScore(keyword) {
       category: 0, property: "",
     }));
     const url = CORS_PROXY + encodeURIComponent(`https://trends.google.com/trends/api/explore?hl=fr&tz=-60&req=${encoded}`);
-    const res  = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const res  = await safeFetch(url, { signal: AbortSignal.timeout(6000) });
     const text = await res.text();
     const json = JSON.parse(text.replace(")]}'\n",""));
     const widgets    = json?.widgets || [];
@@ -311,7 +332,7 @@ function aliGenerateFallback(count) {
   const PLATS = ["TikTok","Instagram","Facebook","Pinterest","YouTube","X"];
   return Array.from({length: count}, (_, i) => {
     const base = ALI_REAL_WINNERS[i % ALI_REAL_WINNERS.length];
-    const [name, niche, emoji, baseAli, baseVol, baseEval, aliItemId, imgHash] = base;
+    const [name, niche, emoji, baseAli, baseVol, baseEval, aliItemId, unsplashKw] = base;
     const suffix   = i >= ALI_REAL_WINNERS.length ? ` Pro ${Math.floor(i/ALI_REAL_WINNERS.length)+1}` : "";
     const aliPrice = Math.round(baseAli*(0.9+rng()*0.2)*100)/100;
     const sellPrice= Math.round(aliPrice*(2.8+rng()*1.5)*100)/100;
@@ -322,8 +343,8 @@ function aliGenerateFallback(count) {
     const platforms= [...PLATS].sort(()=>rng()-0.5).slice(0,1+Math.floor(rng()*4));
     const tags=[]; if(volume>10000)tags.push("Mega Winner"); if(rng()>0.6)tags.push("Viral 🔥"); tags.push(winnerScore>=85?"Elite Score":"High Margin");
     const dt=new Date(); dt.setDate(dt.getDate()-Math.floor(rng()*7));
-    // ✅ Vraie image AliExpress depuis le CDN public (pas de CORS)
-    const aliImg = `https://ae01.alicdn.com/kf/${imgHash}_350x350.jpg`;
+    // ✅ Image Unsplash Source API — photo réelle correspondant au produit
+    const aliImg = `https://source.unsplash.com/400x400/?${unsplashKw}`;
     return {
       id:i+1, aliProductId:aliItemId,
       aliUrl:`https://www.aliexpress.com/item/${aliItemId}.html`,
@@ -373,9 +394,11 @@ function useAliProducts(targetCount = 600) {
         console.warn("[DropElite] API directe indisponible, tentative Firebase Functions:", e.message);
       }
 
-      // ── Niveau 2 : Firebase Functions (serveur, 0 CORS) ───────────────────
+      // ── Niveau 2 : Firebase Functions (désactivé si non déployé) ──────────
+      // Décommente ce bloc quand Firebase Functions est déployé
+      /*
       try {
-        const res = await fetch(`${FB_FUNCTIONS}/getProducts`, { signal: AbortSignal.timeout(25000) });
+        const res = await safeFetch(`${FB_FUNCTIONS}/getProducts`, { signal: AbortSignal.timeout(25000) });
         if (res.ok) {
           const data = await res.json();
           if (cancelled) return;
@@ -385,13 +408,11 @@ function useAliProducts(targetCount = 600) {
               ? aliGenerateFallback(targetCount - sorted.length).map((p,i) => ({...p, id: sorted.length+i+1}))
               : [];
             setProducts([...sorted, ...extras].slice(0, targetCount));
-            console.log(`[DropElite] ✅ ${sorted.length} produits depuis Firebase Functions`);
             return;
           }
         }
-      } catch (e) {
-        console.warn("[DropElite] Firebase Functions indisponible, fallback actif:", e.message);
-      }
+      } catch (e) { }
+      */
 
       // ── Niveau 3 : Fallback généré (toujours disponible) ──────────────────
       if (!cancelled) {
@@ -436,26 +457,8 @@ function useDailyWinners() {
 
       // ── Niveau 2 : Firebase Functions ─────────────────────────────────────
       if (!todayWinners) {
-        try {
-          source = "firebase_functions";
-          const resW = await fetch(`${FB_FUNCTIONS}/getWinners`, { signal: AbortSignal.timeout(20000) });
-          if (resW.ok) {
-            const dW = await resW.json();
-            if (dW.winners?.length > 0) { todayWinners = dW.winners; }
-          }
-          if (!todayWinners) {
-            const resP = await fetch(`${FB_FUNCTIONS}/getProducts`, { signal: AbortSignal.timeout(20000) });
-            if (resP.ok) {
-              const dP = await resP.json();
-              if (dP.success && dP.products?.length > 0) {
-                allProducts = dP.products;
-                todayWinners = [...dP.products].sort((a,b)=>(b.winnerScore||0)-(a.winnerScore||0)).slice(0,10);
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("[DropElite] Firebase Functions winners indisponible:", e.message);
-        }
+        // Firebase Functions désactivé — décommente quand déployé
+        // try { ... } catch {}
       }
 
       // ── Niveau 3 : Fallback généré ─────────────────────────────────────────
@@ -497,7 +500,7 @@ async function sendDailyWinnersEmail(emailAddress, winners) {
   const top10 = winners.slice(0,10);
   const list  = top10.map((w,i)=>`${i+1}. ${w.emoji} ${w.name} — Score: ${w.winnerScore}/100 | Ali: ${w.aliPrice}€ | Vente: ${w.sellPrice}€ | Marge: ${Math.round((w.sellPrice-w.aliPrice)/w.sellPrice*100)}% | ${w.orders30d} ventes`).join("\n");
   try {
-    const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    const res = await safeFetch("https://api.emailjs.com/api/v1.0/email/send", {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
         service_id:EMAILJS_SERVICE_ID, template_id:EMAILJS_TEMPLATE_ID, user_id:EMAILJS_PUBLIC_KEY,
@@ -531,11 +534,25 @@ const auth = getAuth(app);
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
-  static getDerivedStateFromError() { return { hasError: false }; }
-  componentDidCatch(error) {
-    if (error && error.message && error.message.includes("removeChild")) {
-      this.forceUpdate();
+  static getDerivedStateFromError(error) {
+    // Ne pas afficher l'écran rouge pour les erreurs d'extensions Chrome ou de réseau
+    const msg = error?.message || "";
+    const isExtensionError = msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("Load failed");
+    return { hasError: isExtensionError ? false : false }; // toujours false = jamais d'écran rouge
+  }
+  componentDidCatch(error, info) {
+    const msg = error?.message || "";
+    // Ignorer silencieusement les erreurs d'extensions et de réseau
+    if (
+      msg.includes("removeChild") ||
+      msg.includes("Failed to fetch") ||
+      msg.includes("NetworkError") ||
+      msg.includes("Load failed") ||
+      (info?.componentStack || "").includes("chrome-extension")
+    ) {
+      return; // silencieux
     }
+    console.error("[DropElite] Erreur UI:", msg);
   }
   render() { return this.props.children; }
 }
@@ -1623,9 +1640,18 @@ const aliCache = {};
 function ProductImage({ product, height = 130, style = {} }) {
   const theme = NICHE_THEME[product.niche] || NICHE_THEME["Tech & Gadgets"];
   const [imgError, setImgError] = useState(false);
+  const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("http") ? product.img : null);
 
-  // ✅ Vraie image AliExpress (CDN ae01.alicdn.com) — fallback emoji si erreur
-  const imgUrl = !imgError ? (product.img || null) : null;
+  useEffect(() => {
+    if (!aliImg) {
+      fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)
+        .then(r => r.json())
+        .then(d => { if (d.imageUrl) setAliImg(d.imageUrl); })
+        .catch(() => {});
+    }
+  }, [product.name]);
+
+  const imgUrl = !imgError ? aliImg : null;
 
   return (
     <div style={{ height, position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${theme.bg} 0%, ${theme.c1}22 100%)`, ...style }}>
@@ -2098,7 +2124,7 @@ function DetailPanel({ product, onClose, plan = "free", onPaywall, aliLinks = {}
     if (aiData || aiLoading) return;
     setAiLoading(true);
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await safeFetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2709,7 +2735,7 @@ async function fetchGoogleTrendsData(keywords) {
     }));
     const trendsUrl = `https://trends.google.com/trends/api/explore?hl=fr&tz=-60&req=${encoded}`;
 
-    const res = await fetch(proxyUrl + encodeURIComponent(trendsUrl), {
+    const res = await safeFetch(proxyUrl + encodeURIComponent(trendsUrl), {
       signal: AbortSignal.timeout(8000)
     });
     const text = await res.text();

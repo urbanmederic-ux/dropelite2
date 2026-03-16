@@ -1,9 +1,9 @@
-export default async function handler(req, res) {
+﻿export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
 
   const { q } = req.query;
-  if (!q) return res.status(400).json({ error: "Missing query" });
+  if (!q) return res.status(400).json({ imageUrl: null });
 
   try {
     const response = await fetch(
@@ -16,10 +16,12 @@ export default async function handler(req, res) {
       }
     );
     const data = await response.json();
-    const item = data?.result?.resultList?.[0]?.item;
-    const imageUrl = item?.image || null;
-    res.status(200).json({ imageUrl });
+    const items = data?.result?.resultList || [];
+    const imageUrl = items[0]?.item?.image || null;
+    const itemId = items[0]?.item?.itemId || null;
+    const aliUrl = itemId ? `https://www.aliexpress.com/item/${itemId}.html` : null;
+    res.status(200).json({ imageUrl, aliUrl });
   } catch (err) {
-    res.status(500).json({ imageUrl: null });
+    res.status(500).json({ imageUrl: null, aliUrl: null });
   }
 }
