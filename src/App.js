@@ -1640,8 +1640,8 @@ const aliCache = {};
 function ProductImage({ product, height = 130, style = {} }) {
   const theme = NICHE_THEME[product.niche] || NICHE_THEME["Tech & Gadgets"];
   const [imgError, setImgError] = useState(false);
-  const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("http") ? product.img : null);
 
+  const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("http") ? product.img : null);
   useEffect(() => {
     if (!aliImg) {
       fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)
@@ -1650,7 +1650,6 @@ function ProductImage({ product, height = 130, style = {} }) {
         .catch(() => {});
     }
   }, [product.name]);
-
   const imgUrl = !imgError ? aliImg : null;
 
   return (
