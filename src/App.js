@@ -1643,7 +1643,7 @@ function ProductImage({ product, height = 130, style = {} }) {
 
   const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("http") ? product.img : null);
   useEffect(() => {
-    if (!aliImg) {
+    if (!aliImg) {       const cached = window._imgCache?.[product.name];       if (cached) { setAliImg(cached); return; }       const timer = setTimeout(() => {         fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)           .then(r => r.json())           .then(d => {             if (d.imageUrl) {               if (!window._imgCache) window._imgCache = {};               window._imgCache[product.name] = d.imageUrl;               setAliImg(d.imageUrl);             }           })           .catch(() => {});       }, Math.random() * 2000);       return () => clearTimeout(timer);     }
       fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)
         .then(r => r.json())
         .then(d => { if (d.imageUrl) setAliImg(d.imageUrl); })
