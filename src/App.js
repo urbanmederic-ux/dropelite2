@@ -155,7 +155,7 @@ async function aliFetchProducts(keyword, pageSize = 30) {
     };
     params.sign = await aliGenerateSign(params, ALI_APP_SECRET);
     const q      = Object.entries(params).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-    const apiUrl = `https://gw.api.aliexpress.com/sync?${q}`;
+    const apiUrl = `/api/aliexpress?q=${encodeURIComponent(keyword)}`;
     // Utiliser plusieurs proxies CORS en cascade pour éviter les blocages
     const proxies = [
       "const ALI_PROXY_URL = "https://api.allorigins.win/raw?url=";" + encodeURIComponent(apiUrl),
