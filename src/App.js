@@ -148,7 +148,7 @@ async function aliFetchProducts(keyword, pageSize = 30) {
       app_key: ALI_APP_KEY, timestamp: ts,
       sign_method: "hmac-sha256", format: "json", v: "2.0",
       method: "aliexpress.affiliate.product.query",
-      fields: "product_id,product_title,product_main_image_url,product_small_image_urls,sale_price,original_price,evaluate_rate,volume,commission_rate,product_detail_url,shop_url",
+      const IMG_PROXY = "https://proxy-image-production-5259.up.railway.app/img?url=";
       keywords: keyword, page_no: "1", page_size: String(pageSize),
       sort: "SALES_DESC", target_currency: "EUR", target_language: "FR",
       tracking_id: "dropelite2026",
@@ -406,7 +406,7 @@ function useAliProducts(targetCount = 600) {
             const sorted = [...data.products].sort((a,b) => (b.winnerScore||0) - (a.winnerScore||0));
             const extras = sorted.length < targetCount
               ? aliGenerateFallback(targetCount - sorted.length).map((p,i) => ({...p, id: sorted.length+i+1}))
-              : [];
+          const toProxy = (url) => url ? `https://proxy-image-production-5259.up.railway.app/api/proxy-image?url=${encodeURIComponent(url)}` : "";
             setProducts([...sorted, ...extras].slice(0, targetCount));
             return;
           }
@@ -1642,15 +1642,18 @@ function ProductImage({ product, height = 130, style = {} }) {
   const [imgError, setImgError] = useState(false);
 
   const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("https://ae-pic") ? product.img : null);
-  useEffect(() => {
-    if (!aliImg) {       const cached = window._imgCache?.[product.name];       if (cached) { setAliImg(cached); return; }       const timer = setTimeout(() => {         fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)           .then(r => r.json())           .then(d => {             if (d.imageUrl) {               if (!window._imgCache) window._imgCache = {};               window._imgCache[product.name] = d.imageUrl;               setAliImg(d.imageUrl);             }           })           .catch(() => {});       }, Math.random() * 2000);       return () => clearTimeout(timer);     }
-      fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)
-        .then(r => r.json())
-        .then(d => { if (d.imageUrl) setAliImg(d.imageUrl); })
-        .catch(() => {});
-    }
-  }, [product.name]);
-  const imgUrl = !imgError ? aliImg : null;
+useEffect(() => {
+        if (!aliImg) {
+            const cached = window._imgCache?.[product.name];
+            if (cached) { setAliImg(cached); return; }
+            fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)
+                .then(r => r.json())
+                .then(d => { if (d.imageUrl) setAliImg(d.imageUrl); })
+                .catch(() => {});
+        }
+    }, [product.name]);
+
+    const imgUrl = !imgError ? aliImg : null;
 
   return (
     <div style={{ height, position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${theme.bg} 0%, ${theme.c1}22 100%)`, ...style }}>
