@@ -155,10 +155,10 @@ async function aliFetchProducts(keyword, pageSize = 30) {
     };
     params.sign = await aliGenerateSign(params, ALI_APP_SECRET);
     const q      = Object.entries(params).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-    const apiUrl = `https://gw.api.aliexpress.com/sync?${q}`;
+    const apiUrl = `/api/aliexpress?q=${encodeURIComponent(keyword)}`;
     // Utiliser plusieurs proxies CORS en cascade pour éviter les blocages
     const proxies = [
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(apiUrl),
+      "const ALI_PROXY_URL = "https://api.allorigins.win/raw?url=";" + encodeURIComponent(apiUrl),
       "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(apiUrl),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(apiUrl),
       "https://proxy.cors.sh/" + apiUrl,
@@ -1641,9 +1641,9 @@ function ProductImage({ product, height = 130, style = {} }) {
   const theme = NICHE_THEME[product.niche] || NICHE_THEME["Tech & Gadgets"];
   const [imgError, setImgError] = useState(false);
 
-  const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("http") ? product.img : null);
+  const [aliImg, setAliImg] = useState(product.img && product.img.startsWith("https://ae-pic") ? product.img : null);
   useEffect(() => {
-    if (!aliImg) {
+    if (!aliImg) {       const cached = window._imgCache?.[product.name];       if (cached) { setAliImg(cached); return; }       const timer = setTimeout(() => {         fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)           .then(r => r.json())           .then(d => {             if (d.imageUrl) {               if (!window._imgCache) window._imgCache = {};               window._imgCache[product.name] = d.imageUrl;               setAliImg(d.imageUrl);             }           })           .catch(() => {});       }, Math.random() * 2000);       return () => clearTimeout(timer);     }
       fetch(`/api/aliexpress?q=${encodeURIComponent(product.name)}`)
         .then(r => r.json())
         .then(d => { if (d.imageUrl) setAliImg(d.imageUrl); })
