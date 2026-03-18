@@ -158,7 +158,7 @@ async function aliFetchProducts(keyword, pageSize = 30) {
     const apiUrl = `/api/aliexpress?q=${encodeURIComponent(keyword)}`;
     // Utiliser plusieurs proxies CORS en cascade pour éviter les blocages
     const proxies = [
-      "const ALI_PROXY_URL = "https://api.allorigins.win/raw?url=";" + encodeURIComponent(apiUrl),
+      "https://api.allorigins.win/raw?url=" + encodeURIComponent(apiUrl),
       "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(apiUrl),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(apiUrl),
       "https://proxy.cors.sh/" + apiUrl,
