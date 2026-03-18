@@ -142,16 +142,23 @@ const ALI_PROXY_URL = "https://api.allorigins.win/raw?url=";
 async function aliFetchProducts(keyword, pageSize = 30) {
   try {
     const now = new Date();
-    const pad = n => String(n).padStart(2,"0");
-    const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+    // LIGNE À DÉPLACER ICI (Elle doit être AVANT le "const params")
+    const IMG_PROXY = "https://proxy-image-production-5259.up.railway.app/img?url=";
+
     const params = {
-      app_key: ALI_APP_KEY, timestamp: ts,
-      sign_method: "hmac-sha256", format: "json", v: "2.0",
-      method: "aliexpress.affiliate.product.query",
-      const IMG_PROXY = "https://proxy-image-production-5259.up.railway.app/img?url=";
-      keywords: keyword, page_no: "1", page_size: String(pageSize),
-      sort: "SALES_DESC", target_currency: "EUR", target_language: "FR",
-      tracking_id: "dropelite2026",
+        app_key: ALI_APP_KEY,
+        sign_method: "hmac-sha256",
+        method: "aliexpress.affiliate.product.query",
+        keywords: keyword,
+        page_no: "1",
+        page_size: "20",
+        sort: "SALES_DESC",
+        target_currency: "EUR",
+        target_language: "FR",
+        tracking_id: "dropelite2026",
+        timestamp: ts
     };
     params.sign = await aliGenerateSign(params, ALI_APP_SECRET);
     const q      = Object.entries(params).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
