@@ -155,10 +155,10 @@ async function aliFetchProducts(keyword, pageSize = 30) {
     };
     params.sign = await aliGenerateSign(params, ALI_APP_SECRET);
     const q      = Object.entries(params).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
-    const apiUrl = `/api/aliexpress?q=${encodeURIComponent(keyword)}`;
+    const apiUrl = `https://gw.api.aliexpress.com/sync?${q}`;
     // Utiliser plusieurs proxies CORS en cascade pour éviter les blocages
     const proxies = [
-      "https://api.allorigins.win/raw?url=" + encodeURIComponent(apiUrl),
+      "const ALI_PROXY_URL = "https://api.allorigins.win/raw?url=";" + encodeURIComponent(apiUrl),
       "https://thingproxy.freeboard.io/fetch/" + encodeURIComponent(apiUrl),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(apiUrl),
       "https://proxy.cors.sh/" + apiUrl,
@@ -344,7 +344,7 @@ function aliGenerateFallback(count) {
     const tags=[]; if(volume>10000)tags.push("Mega Winner"); if(rng()>0.6)tags.push("Viral 🔥"); tags.push(winnerScore>=85?"Elite Score":"High Margin");
     const dt=new Date(); dt.setDate(dt.getDate()-Math.floor(rng()*7));
     // ✅ Image Unsplash Source API — photo réelle correspondant au produit
-    const aliImg = `https://source.unsplash.com/400x400/?${unsplashKw}`;
+    const aliImg = null;
     return {
       id:i+1, aliProductId:aliItemId,
       aliUrl:`https://www.aliexpress.com/item/${aliItemId}.html`,
